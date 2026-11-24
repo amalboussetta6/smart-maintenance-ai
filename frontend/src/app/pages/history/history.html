@@ -1,0 +1,131 @@
+<div class="page">
+  <!-- ===== Filtres ===== -->
+  <div class="card">
+    <div class="filters">
+      <div class="filter">
+        <label class="kpi-label" for="machineFilter">Machine</label>
+        <select id="machineFilter" class="select" [(ngModel)]="machineFilter" (ngModelChange)="onFilterChange()">
+          <option value="">Toutes les machines</option>
+          @for (machine of machines; track machine.machine_id) {
+            <option [value]="machine.machine_id">{{ machine.machine_id }} — {{ machine.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter">
+        <label class="kpi-label" for="stateFilter">État</label>
+        <select id="stateFilter" class="select" [(ngModel)]="stateFilter" (ngModelChange)="onFilterChange()">
+          <option value="">Tous les états</option>
+          <option value="Normal">Normal</option>
+          <option value="Avertissement">Avertissement</option>
+          <option value="Critique">Critique</option>
+        </select>
+      </div>
+      <div class="filter">
+        <label class="kpi-label" for="dateFrom">Du</label>
+        <input id="dateFrom" class="input" type="date" [(ngModel)]="dateFrom" (ngModelChange)="onFilterChange()" />
+      </div>
+      <div class="filter">
+        <label class="kpi-label" for="dateTo">Au</label>
+        <input id="dateTo" class="input" type="date" [(ngModel)]="dateTo" (ngModelChange)="onFilterChange()" />
+      </div>
+      <div class="filter search-filter">
+        <label class="kpi-label" for="searchText">Recherche</label>
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input id="searchText" class="input" type="text" placeholder="Identifiant (ex : MOT-093)"
+                 [(ngModel)]="searchText" (ngModelChange)="onFilterChange()" />
+        </div>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" [(ngModel)]="anomalyOnly" (ngModelChange)="onFilterChange()" />
+        Comportements inhabituels uniquement
+      </label>
+    </div>
+
+    <div class="filter-actions">
+      <span class="text-muted">{{ getFilteredPredictions().length }} estimation(s) correspondant aux filtres</span>
+      <div class="toolbar">
+        <button class="btn btn-light btn-small" (click)="resetFilters()"><i class="bi bi-x-lg"></i> Réinitialiser</button>
+        <button class="btn btn-light btn-small" (click)="loadData()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+        <button class="btn btn-primary btn-small" (click)="exportCsv()" [disabled]="getFilteredPredictions().length === 0">
+          <i class="bi bi-download"></i> Exporter en CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Graphique d'évolution ===== -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="bi bi-graph-up"></i> Évolution des estimations</div>
+        <div class="card-subtitle">
+          @if (machineFilter) {
+            {{ machineFilter }} · durée de vie restante estimée et score de santé à chaque cycle
+          } @else {
+            Sélectionnez une machine dans les filtres pour afficher son évolution.
+          }
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" [hidden]="!machineFilter"><canvas id="historyChart"></canvas></div>
+  </div>
+
+  <!-- ===== Tableau ===== -->
+  <div class="card">
+    @if (loading) {
+      <div class="loading"><div class="spinner"></div> Chargement de l'historique...</div>
+    }
+    @if (errorMessage) {
+      <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+    }
+
+    @if (!loading && !errorMessage) {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Date</th>
+              <th>Cycle</th>
+              <th>Durée de vie restante<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.rul"></i></th>
+              <th>Score de santé<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.health"></i></th>
+              <th>Indicateur d'anomalie<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.anomaly"></i></th>
+              <th>État</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (prediction of getPageOfPredictions(); track prediction.id) {
+              <tr>
+                <td class="text-strong">{{ prediction.machine_id }}</td>
+                <td class="text-muted nowrap">{{ prediction.created_at | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                <td>{{ prediction.cycle }}</td>
+                <td>{{ prediction.predicted_rul | number: '1.0-0' }} cycles</td>
+                <td>{{ prediction.health_score | number: '1.0-0' }}/100</td>
+                <td>
+                  {{ getAnomalyPercent(prediction.anomaly_score) }}
+                  @if (prediction.is_anomaly) {
+                    <span class="unusual"><i class="bi bi-exclamation-triangle-fill"></i> inhabituel</span>
+                  }
+                </td>
+                <td><span [class]="getStateBadgeClass(prediction.state)">{{ prediction.state }}</span></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Aucune estimation ne correspond aux filtres.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button class="btn btn-light btn-small" (click)="changePage(-1)" [disabled]="currentPage === 1">
+          <i class="bi bi-chevron-left"></i> Précédent
+        </button>
+        <span class="text-muted">Page {{ currentPage }} / {{ getNumberOfPages() }}</span>
+        <button class="btn btn-light btn-small" (click)="changePage(1)" [disabled]="currentPage === getNumberOfPages()">
+          Suivant <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    }
+  </div>
+</div>

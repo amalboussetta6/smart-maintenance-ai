@@ -1,0 +1,119 @@
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: var(--orange-soft);
+  border: 1px solid #ffd8a8;
+  color: #8a4b00;
+}
+
+.warning-banner i {
+  font-size: 18px;
+  margin-top: 1px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.speed-field {
+  min-width: 200px;
+}
+
+.control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sim-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sim-status i {
+  font-size: 9px;
+}
+
+.sim-status.running {
+  color: var(--green);
+}
+
+.sim-status.paused {
+  color: var(--orange);
+}
+
+.kpi-value small {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.spinning {
+  animation: spin 1.2s linear infinite;
+}
+
+.recommendation-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.recommendation-text.wide {
+  max-width: none;
+}
+
+.sensor-select {
+  max-width: 340px;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sensor-cell {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f6f9fd;
+  border: 1px solid var(--border);
+}
+
+.sensor-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.3;
+  min-height: 30px;
+}
+
+.new-alert {
+  animation: fadeIn 0.4s ease;
+}

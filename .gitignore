@@ -1,0 +1,33 @@
+# ============================================================
+# Fichiers à ne pas publier sur GitHub
+# ============================================================
+
+# Environnement virtuel Python (recréé avec : py -3.12 -m venv venv)
+venv/
+.venv/
+env/
+
+# Caches Python et Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Angular : dépendances (recréées avec npm install) et fichiers générés
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Scripts et rapports temporaires d'installation
+_installation/
+*.log
+
+# Fichiers de configuration personnels ou secrets éventuels
+.env
+.env.*
+
+# Éditeurs et système
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

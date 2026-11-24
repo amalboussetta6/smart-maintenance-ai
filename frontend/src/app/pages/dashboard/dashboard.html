@@ -1,0 +1,167 @@
+<div class="page">
+  <div class="page-actions">
+    <div class="disclaimer">
+      <i class="bi bi-info-circle"></i> {{ helpTexts.estimate }}
+    </div>
+    <div class="refresh">
+      @if (dashboard) {
+        <span class="text-muted text-small">Dernière actualisation : {{ dashboard.refreshed_at | date: 'HH:mm:ss' }}</span>
+      }
+      <button class="btn btn-light btn-small" (click)="loadDashboard()">
+        <i class="bi bi-arrow-clockwise"></i> Actualiser
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><div class="spinner"></div> Chargement du tableau de bord...</div>
+  }
+
+  @if (errorMessage) {
+    <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+  }
+
+  @if (dashboard) {
+    <!-- ===== Indicateurs clés ===== -->
+    <div class="grid grid-kpi">
+      <div class="card kpi">
+        <div class="kpi-icon icon-navy"><i class="bi bi-hdd-stack"></i></div>
+        <div><div class="kpi-label">Machines suivies</div><div class="kpi-value">{{ dashboard.total_machines }}</div></div>
+      </div>
+      <a class="card kpi kpi-link" routerLink="/machines">
+        <div class="kpi-icon icon-green"><i class="bi bi-check-circle"></i></div>
+        <div><div class="kpi-label">Fonctionnement normal</div><div class="kpi-value">{{ dashboard.normal_machines }}</div></div>
+      </a>
+      <a class="card kpi kpi-link" routerLink="/maintenance">
+        <div class="kpi-icon icon-orange"><i class="bi bi-eye"></i></div>
+        <div><div class="kpi-label">À surveiller</div><div class="kpi-value">{{ dashboard.warning_machines }}</div></div>
+      </a>
+      <a class="card kpi kpi-link" routerLink="/maintenance">
+        <div class="kpi-icon icon-red"><i class="bi bi-exclamation-octagon"></i></div>
+        <div><div class="kpi-label">Critiques</div><div class="kpi-value">{{ dashboard.critical_machines }}</div></div>
+      </a>
+      @if (dashboard.not_evaluated_machines > 0) {
+        <div class="card kpi">
+          <div class="kpi-icon icon-navy"><i class="bi bi-question-circle"></i></div>
+          <div><div class="kpi-label">Non évaluées</div><div class="kpi-value">{{ dashboard.not_evaluated_machines }}</div></div>
+        </div>
+      }
+      <a class="card kpi kpi-link" routerLink="/alertes">
+        <div class="kpi-icon icon-blue"><i class="bi bi-bell"></i></div>
+        <div><div class="kpi-label">Alertes non traitées</div><div class="kpi-value">{{ dashboard.active_alerts }}</div></div>
+      </a>
+      <div class="card kpi">
+        <div class="kpi-icon icon-blue"><i class="bi bi-heart-pulse"></i></div>
+        <div>
+          <div class="kpi-label">
+            Score de santé moyen
+            <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.health + ' Moyenne calculée sur les machines évaluées uniquement.'"></i>
+          </div>
+          @if (dashboard.average_health_score !== null) {
+            <div class="kpi-value">{{ dashboard.average_health_score | number: '1.0-0' }}<small>/100</small></div>
+          } @else {
+            <div class="kpi-value text-muted">—</div>
+          }
+          <div class="text-muted text-small">{{ dashboard.evaluated_machines }} machine(s) évaluée(s)</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Graphiques (toujours présents pour que Chart.js trouve les canvas) ===== -->
+  <div class="grid grid-1-2" [hidden]="!dashboard">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-pie-chart"></i> Répartition des états</div>
+      </div>
+      <div class="chart-box"><canvas id="stateChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-bar-chart"></i> Score de santé par machine
+          <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.health"></i>
+        </div>
+        <div class="legend-inline">
+          <span><i class="dot dot-green"></i> Normal</span>
+          <span><i class="dot dot-orange"></i> Avertissement</span>
+          <span><i class="dot dot-red"></i> Critique</span>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="healthChart"></canvas></div>
+    </div>
+  </div>
+
+  @if (dashboard) {
+    <div class="grid grid-2-1">
+      <!-- ===== Interventions urgentes ===== -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-exclamation-octagon urgent-icon"></i> Machines nécessitant une intervention urgente</div>
+          <a routerLink="/maintenance" class="btn btn-light btn-small">Plan de maintenance</a>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Machine</th>
+                <th>Durée de vie restante</th>
+                <th>Score de santé</th>
+                <th>Recommandation</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (machine of dashboard.urgent_machines; track machine.machine_id) {
+                <tr>
+                  <td>
+                    <div class="text-strong nowrap">{{ machine.name }}</div>
+                    <div class="text-muted text-small">{{ machine.machine_id }}</div>
+                  </td>
+                  <td class="text-strong nowrap">{{ machine.current_rul | number: '1.0-0' }} cycles</td>
+                  <td><span class="badge badge-critical">{{ machine.health_score | number: '1.0-0' }}/100</span></td>
+                  <td>
+                    <div class="recommendation-text"><i class="bi bi-wrench-adjustable"></i>{{ machine.recommendation }}</div>
+                  </td>
+                  <td class="text-right">
+                    <a [routerLink]="['/machines', machine.machine_id]" class="btn btn-light btn-small">Détails</a>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty"><i class="bi bi-check2-circle"></i> Aucune machine ne nécessite d'intervention urgente.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== Dernières alertes ===== -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-bell"></i> Dernières alertes</div>
+          <a routerLink="/alertes" class="btn btn-light btn-small">Toutes les alertes</a>
+        </div>
+        @for (alert of dashboard.latest_alerts; track alert.id) {
+          <div class="alert-item">
+            <div class="alert-icon" [class.icon-red]="alert.severity === 'Critique'"
+                 [class.icon-orange]="alert.severity === 'Avertissement'">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+              <div class="text-strong">{{ alert.machine_name }}</div>
+              <div class="text-small">
+                <span [class]="getStateBadgeClass(alert.severity)">{{ alert.severity }}</span>
+                @if (alert.status === 'traitée') {
+                  <span class="badge badge-gray">Traitée</span>
+                }
+              </div>
+              <div class="text-muted text-small">{{ alert.created_at | date: 'dd/MM/yyyy à HH:mm' }}</div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty">Aucune alerte pour le moment.</div>
+        }
+      </div>
+    </div>
+  }
+</div>

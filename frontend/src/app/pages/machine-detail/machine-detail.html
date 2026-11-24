@@ -1,0 +1,193 @@
+<div class="page">
+  <div>
+    <a routerLink="/machines" class="btn btn-light btn-small"><i class="bi bi-arrow-left"></i> Retour aux machines</a>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><div class="spinner"></div> Chargement de la machine...</div>
+  }
+  @if (errorMessage) {
+    <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+  }
+
+  @if (details) {
+    <!-- ===== Informations générales ===== -->
+    <div class="card machine-header">
+      <div class="machine-title">
+        <div class="kpi-icon icon-navy"><i class="bi bi-gear-wide-connected"></i></div>
+        <div>
+          <h2>{{ details.machine.name }}</h2>
+          <div class="text-muted">
+            {{ details.machine.machine_id }} · dernière actualisation le
+            {{ details.machine.last_update | date: 'dd/MM/yyyy à HH:mm' }}
+          </div>
+        </div>
+        <div class="title-badges">
+          <span [class]="getStateBadgeClass(details.machine.state)">{{ details.machine.state }}</span>
+          <span [class]="getPriorityBadgeClass(details.machine.priority)">Priorité {{ details.machine.priority | lowercase }}</span>
+        </div>
+      </div>
+
+      @if (details.machine.health_score !== null) {
+        <div class="grid grid-4 machine-stats">
+          <div>
+            <div class="kpi-label">Durée de vie restante estimée <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.rul"></i></div>
+            <div class="kpi-value">{{ details.machine.current_rul | number: '1.0-0' }} <small>cycles</small></div>
+          </div>
+          <div>
+            <div class="kpi-label">Score de santé <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.health"></i></div>
+            <div class="kpi-value">{{ details.machine.health_score | number: '1.0-0' }}<small>/100</small></div>
+          </div>
+          <div>
+            <div class="kpi-label">Indicateur d'anomalie <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.anomaly"></i></div>
+            <div class="kpi-value">{{ getAnomalyLevelLabel(details.machine.anomaly_score) }}
+              <small>{{ getAnomalyPercent(details.machine.anomaly_score) }}</small></div>
+          </div>
+          <div>
+            <div class="kpi-label">Cycle de fonctionnement actuel</div>
+            <div class="kpi-value">{{ details.machine.current_cycle }}</div>
+          </div>
+        </div>
+      } @else {
+        <div class="info-box">
+          <i class="bi bi-question-circle-fill"></i>
+          Cette machine n'a pas encore été évaluée : aucune estimation n'est disponible. Elle ne doit pas être
+          considérée comme saine pour autant.
+        </div>
+      }
+
+      <!-- Recommandation -->
+      <div class="recommendation-box">
+        <div class="recommendation-title"><i class="bi bi-wrench-adjustable"></i> Recommandation</div>
+        <div class="recommendation-main">{{ details.machine.recommendation }}</div>
+        @if (details.machine.is_anomaly && details.machine.unusual_sensors.length > 0) {
+          <div class="text-small">
+            Comportement inhabituel observé. Mesures les plus éloignées du fonctionnement habituel :
+            <b>{{ details.machine.unusual_sensors.join(', ') }}</b>.
+          </div>
+          <div class="text-muted text-small">
+            Ces mesures sont indiquées pour orienter le contrôle : elles ne désignent pas la cause d'une panne.
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ===== Graphiques ===== -->
+  @if (details && details.predictions.length === 0) {
+    <div class="card empty">Aucune mesure n'est encore enregistrée pour cette machine.</div>
+  }
+
+  <div class="grid grid-2" [hidden]="!details || details.predictions.length === 0">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="bi bi-heart-pulse"></i> Évolution de l'état de la machine</div>
+          <div class="card-subtitle">Score de santé à chaque cycle et seuils des états</div>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="detailStateChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="bi bi-hourglass-split"></i> Durée de vie restante estimée</div>
+          <div class="card-subtitle">Nombre de cycles estimés avant une panne probable</div>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="detailRulChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-broadcast"></i> Mesures des capteurs</div>
+        <select class="select sensor-select" [(ngModel)]="selectedSensor" (change)="drawSensorChart()">
+          @for (sensor of sensorNames; track sensor) {
+            <option [value]="sensor">{{ getSensorTitle(sensor) }}</option>
+          }
+        </select>
+      </div>
+      <div class="chart-box"><canvas id="detailSensorChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">
+            <i class="bi bi-radar"></i> Anomalies détectées
+            <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.anomaly"></i>
+          </div>
+          @if (details) {
+            <div class="card-subtitle">
+              Comportement inhabituel sur {{ countRecentUnusualCycles() }} des 20 derniers cycles ·
+              {{ details.anomalies.length }} cycle(s) au total
+            </div>
+          }
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="detailAnomalyChart"></canvas></div>
+    </div>
+  </div>
+
+  @if (details && details.predictions.length > 0) {
+    <div class="grid grid-2-1">
+      <!-- ===== Historique des estimations ===== -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-clock-history"></i> Dernières estimations (50 plus récentes)</div>
+          <a routerLink="/historique" class="btn btn-light btn-small">Historique complet</a>
+        </div>
+        <div class="table-wrapper scroll-table">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Cycle</th><th>Durée de vie restante</th><th>Score de santé</th><th>Anomalie</th><th>État</th></tr>
+            </thead>
+            <tbody>
+              @for (prediction of getLatestPredictions(); track prediction.id) {
+                <tr>
+                  <td class="text-muted text-small nowrap">{{ prediction.created_at | date: 'dd/MM HH:mm:ss' }}</td>
+                  <td>{{ prediction.cycle }}</td>
+                  <td>{{ prediction.predicted_rul | number: '1.0-0' }} cycles</td>
+                  <td>{{ prediction.health_score | number: '1.0-0' }}/100</td>
+                  <td>
+                    @if (prediction.is_anomaly) {
+                      <span class="unusual"><i class="bi bi-exclamation-triangle-fill"></i> Inhabituel</span>
+                    } @else {
+                      <span class="usual">—</span>
+                    }
+                  </td>
+                  <td><span [class]="getStateBadgeClass(prediction.state)">{{ prediction.state }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== Alertes de la machine ===== -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-bell"></i> Alertes de la machine</div>
+        </div>
+        @for (alert of details.alerts; track alert.id) {
+          <div class="alert-item">
+            <div class="alert-icon" [class.icon-red]="alert.severity === 'Critique'"
+                 [class.icon-orange]="alert.severity === 'Avertissement'">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+              <div class="text-strong">{{ alert.severity }} · {{ alert.created_at | date: 'dd/MM/yyyy à HH:mm' }}</div>
+              <div class="text-small">{{ alert.description }}</div>
+              <div class="text-muted text-small">
+                @if (alert.status === 'active') { Non traitée } @else { Traitée }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty">Aucune alerte pour cette machine.</div>
+        }
+      </div>
+    </div>
+  }
+</div>

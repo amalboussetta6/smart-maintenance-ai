@@ -1,0 +1,114 @@
+<div class="page">
+  <div class="page-actions">
+    <p class="page-intro">État actuel de chaque machine suivie, estimé automatiquement à partir des mesures de ses capteurs.</p>
+    <button class="btn btn-light btn-small" (click)="loadMachines()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input class="input" type="text" placeholder="Rechercher une machine..." [(ngModel)]="searchText" />
+        </div>
+        <select class="select" [(ngModel)]="stateFilter">
+          <option value="">Tous les états</option>
+          <option value="Normal">Normal</option>
+          <option value="Avertissement">Avertissement</option>
+          <option value="Critique">Critique</option>
+          <option value="Non évaluée">Non évaluée</option>
+        </select>
+        <select class="select" [(ngModel)]="priorityFilter">
+          <option value="">Toutes les priorités</option>
+          <option value="Urgente">Urgente</option>
+          <option value="Élevée">Élevée</option>
+          <option value="Normale">Normale</option>
+        </select>
+        @if (searchText || stateFilter || priorityFilter) {
+          <button class="btn btn-light btn-small" (click)="resetFilters()"><i class="bi bi-x-lg"></i> Effacer les filtres</button>
+        }
+      </div>
+      <span class="text-muted">{{ getFilteredMachines().length }} machine(s)</span>
+    </div>
+
+    @if (loading) {
+      <div class="loading"><div class="spinner"></div> Chargement des machines...</div>
+    }
+    @if (errorMessage) {
+      <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+    }
+
+    @if (!loading && !errorMessage) {
+      <div class="table-wrapper">
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>État</th>
+              <th>Durée de vie restante<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.rul"></i></th>
+              <th>Score de santé<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.health"></i></th>
+              <th>Anomalies<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.anomaly"></i></th>
+              <th>Priorité<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.priority"></i></th>
+              <th>Recommandation</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (machine of getFilteredMachines(); track machine.machine_id) {
+              <tr>
+                <td>
+                  <div class="text-strong nowrap">{{ machine.machine_id }}</div>
+                  <div class="text-small nowrap">{{ machine.name }}</div>
+                  <div class="text-muted text-small nowrap">Actualisé le {{ machine.last_update | date: 'dd/MM HH:mm' }}</div>
+                </td>
+                <td><span [class]="getStateBadgeClass(machine.state)">{{ machine.state }}</span></td>
+
+                @if (machine.health_score !== null) {
+                  <td class="text-strong nowrap">{{ machine.current_rul | number: '1.0-0' }} cycles</td>
+                  <td>
+                    <div class="health-bar">
+                      <div class="health-bar-track">
+                        <div class="health-bar-fill" [style.width.%]="machine.health_score"
+                             [style.background]="getStateColor(machine.state)"></div>
+                      </div>
+                      <span class="text-strong nowrap">{{ machine.health_score | number: '1.0-0' }}/100</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="anomaly-cell">
+                      @if (machine.is_anomaly) {
+                        <span class="unusual nowrap"><i class="bi bi-exclamation-triangle-fill"></i> Inhabituel</span>
+                      } @else {
+                        <span class="usual">Aucune anomalie</span>
+                      }
+                      <span class="text-muted text-small nowrap">
+                        Indicateur {{ getAnomalyLevelLabel(machine.anomaly_score) | lowercase }} · {{ getAnomalyPercent(machine.anomaly_score) }}
+                      </span>
+                    </div>
+                  </td>
+                } @else {
+                  <td colspan="3" class="text-muted text-small">
+                    <i class="bi bi-question-circle"></i> Aucune estimation disponible pour cette machine.
+                  </td>
+                }
+
+                <td><span [class]="getPriorityBadgeClass(machine.priority)">{{ machine.priority }}</span></td>
+                <td>
+                  <div class="recommendation-text"><i class="bi bi-wrench-adjustable"></i>{{ machine.recommendation }}</div>
+                </td>
+                <td class="text-right">
+                  <a [routerLink]="['/machines', machine.machine_id]" class="btn btn-primary btn-small"
+                     title="Voir les détails de la machine">
+                    <i class="bi bi-chevron-right"></i>
+                  </a>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="empty">Aucune machine ne correspond à la recherche.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

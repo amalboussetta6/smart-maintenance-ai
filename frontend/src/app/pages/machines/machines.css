@@ -1,0 +1,12 @@
+/* Tableau compact : beaucoup de colonnes à afficher */
+.compact td, .compact th {
+  padding: 10px 8px;
+}
+
+.compact .health-bar {
+  min-width: 80px;
+}
+
+.compact .recommendation-text {
+  max-width: 210px;
+}

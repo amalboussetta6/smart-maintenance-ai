@@ -1,0 +1,201 @@
+<div class="page">
+  <div class="warning-banner">
+    <i class="bi bi-exclamation-diamond-fill"></i>
+    <div>
+      <b>Mode simulation.</b> Les mesures affichées proviennent du jeu de données historique NASA C-MAPSS,
+      rejoué cycle par cycle. Elles ne proviennent pas de machines industrielles réellement connectées.
+      Les estimations sont calculées en direct et enregistrées comme pour une machine réelle.
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+  }
+
+  <!-- ===== Panneau de commande ===== -->
+  <div class="card controls">
+    <div class="control-field">
+      <label class="kpi-label" for="machineSelect">Machine</label>
+      <select id="machineSelect" class="select" [(ngModel)]="selectedMachineId" [disabled]="isRunning() || isPaused()">
+        @for (machine of machines; track machine.machine_id) {
+          <option [value]="machine.machine_id">{{ machine.machine_id }} — {{ machine.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="control-field speed-field">
+      <label class="kpi-label" for="speedSelect">Vitesse</label>
+      <select id="speedSelect" class="select" [(ngModel)]="speed" (ngModelChange)="onSpeedChange()">
+        @for (option of speedOptions; track option) {
+          <option [ngValue]="option">{{ option }} cycle(s) par seconde</option>
+        }
+      </select>
+    </div>
+
+    <div class="control-buttons">
+      <button class="btn btn-success" (click)="start()" [disabled]="isRunning() || isPaused() || selectedMachineId === ''">
+        <i class="bi bi-play-fill"></i> Démarrer
+      </button>
+      <button class="btn btn-warning" (click)="pause()" [disabled]="!isRunning()">
+        <i class="bi bi-pause-fill"></i> Pause
+      </button>
+      <button class="btn btn-primary" (click)="resume()" [disabled]="!isPaused()">
+        <i class="bi bi-skip-forward-fill"></i> Reprendre
+      </button>
+      <button class="btn btn-danger" (click)="stop()" [disabled]="!isRunning() && !isPaused()">
+        <i class="bi bi-stop-fill"></i> Arrêter
+      </button>
+    </div>
+  </div>
+
+  <div class="status-line">
+    <span class="sim-status" [class.running]="isRunning()" [class.paused]="isPaused()">
+      <i class="bi bi-circle-fill"></i> Simulation : {{ getStatusLabel() }}
+    </span>
+    @if (status?.machine_id) {
+      <span class="text-muted">· {{ getMachineName(status.machine_id) }} ({{ status.machine_id }})</span>
+    }
+    @if (isRunning() || isPaused()) {
+      <span class="text-muted text-small">Démarrer une nouvelle simulation efface l'historique précédent de la machine choisie.</span>
+    }
+  </div>
+
+  <!-- ===== Indicateurs en direct ===== -->
+  <div class="grid grid-kpi">
+    <div class="card kpi">
+      <div class="kpi-icon icon-navy"><i class="bi bi-arrow-repeat" [class.spinning]="isRunning()"></i></div>
+      <div>
+        <div class="kpi-label">Cycle de fonctionnement actuel</div>
+        <div class="kpi-value">{{ status?.current_cycle || 0 }}</div>
+      </div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon" [style.background]="getStateColor(status?.last_result?.state) + '22'"
+           [style.color]="getStateColor(status?.last_result?.state)">
+        <i class="bi bi-shield-check"></i>
+      </div>
+      <div>
+        <div class="kpi-label">État de la machine</div>
+        @if (status?.last_result) {
+          <span [class]="getStateBadgeClass(status.last_result.state)">{{ status.last_result.state }}</span>
+        } @else {
+          <span class="badge badge-gray">Non évaluée</span>
+        }
+      </div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-blue"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="kpi-label">Durée de vie restante estimée <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.rul"></i></div>
+        @if (status?.last_result) {
+          <div class="kpi-value">{{ status.last_result.predicted_rul | number: '1.0-0' }} <small>cycles</small></div>
+        } @else {
+          <div class="kpi-value text-muted">—</div>
+        }
+      </div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-green"><i class="bi bi-heart-pulse"></i></div>
+      <div>
+        <div class="kpi-label">Score de santé <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.health"></i></div>
+        @if (status?.last_result) {
+          <div class="kpi-value">{{ status.last_result.health_score | number: '1.0-0' }}<small>/100</small></div>
+        } @else {
+          <div class="kpi-value text-muted">—</div>
+        }
+      </div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-orange"><i class="bi bi-radar"></i></div>
+      <div>
+        <div class="kpi-label">Comportement inhabituel <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.anomaly"></i></div>
+        @if (status?.last_result) {
+          @if (status.last_result.is_anomaly) {
+            <span class="unusual"><i class="bi bi-exclamation-triangle-fill"></i> Oui</span>
+          } @else {
+            <span class="usual">Non</span>
+          }
+          <div class="text-muted text-small">Indicateur : {{ getAnomalyLevelLabel(status.last_result.anomaly_score) }}
+            ({{ getAnomalyPercent(status.last_result.anomaly_score) }})</div>
+        } @else {
+          <div class="kpi-value text-muted">—</div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (status?.last_result) {
+    <div class="card recommendation-card">
+      <span [class]="getPriorityBadgeClass(status.last_result.priority)">Priorité {{ status.last_result.priority }}</span>
+      <div class="recommendation-text wide"><i class="bi bi-wrench-adjustable"></i><b>{{ status.last_result.recommendation }}</b></div>
+      @if (status.last_result.unusual_sensors.length > 0) {
+        <span class="text-muted text-small">
+          Mesures à contrôler en priorité (indicatif) : {{ status.last_result.unusual_sensors.join(', ') }}
+        </span>
+      }
+    </div>
+  }
+
+  <!-- ===== Graphiques d'évolution ===== -->
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-graph-down"></i> Durée de vie restante et score de santé</div>
+      </div>
+      <div class="chart-box"><canvas id="simIndicatorsChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><i class="bi bi-radar"></i> Indicateur d'anomalie</div>
+          <div class="card-subtitle">{{ countUnusualCycles() }} cycle(s) avec un comportement inhabituel depuis le début</div>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="simAnomalyChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid grid-2-1">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-broadcast"></i> Mesures des capteurs</div>
+        <select class="select sensor-select" [(ngModel)]="selectedSensor" (change)="updateCharts()">
+          @for (sensor of sensorNames; track sensor) {
+            <option [value]="sensor">{{ getSensorTitle(sensor) }}</option>
+          }
+        </select>
+      </div>
+      <div class="chart-box-small"><canvas id="simSensorChart"></canvas></div>
+      <div class="sensor-grid">
+        @for (sensor of getSensorList(); track sensor.label) {
+          <div class="sensor-cell">
+            <div class="sensor-label">{{ sensor.label }}</div>
+            <div class="text-strong">{{ sensor.value | number: '1.0-4' }} <span class="text-muted text-small">{{ sensor.unit }}</span></div>
+          </div>
+        } @empty {
+          <div class="empty">Démarrez une simulation pour voir les mesures en direct.</div>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-bell"></i> Alertes générées pendant la simulation</div>
+      </div>
+      @for (alert of status?.alerts; track alert.id) {
+        <div class="alert-item new-alert">
+          <div class="alert-icon" [class.icon-red]="alert.severity === 'Critique'"
+               [class.icon-orange]="alert.severity === 'Avertissement'">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <div>
+            <div class="text-strong">{{ alert.severity }} · cycle {{ alert.cycle }}</div>
+            <div class="text-small">{{ alert.description }}</div>
+            <div class="text-muted text-small">{{ alert.created_at | date: 'HH:mm:ss' }}</div>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty">Aucune alerte générée pendant cette simulation.</div>
+      }
+    </div>
+  </div>
+</div>

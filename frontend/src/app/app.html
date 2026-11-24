@@ -1,0 +1,62 @@
+<div class="layout">
+  <!-- ===== Barre latérale ===== -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"><i class="bi bi-activity"></i></div>
+      <div>
+        <div class="logo-title">Smart Maintenance</div>
+        <div class="logo-subtitle">Maintenance prédictive</div>
+      </div>
+    </div>
+
+    <nav class="menu">
+      @for (item of menuItems; track item.path) {
+        <a class="menu-link" [routerLink]="item.path" routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: item.path === '/' }">
+          <i class="bi" [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+          @if (item.path === '/alertes' && activeAlertCount > 0) {
+            <span class="menu-count">{{ activeAlertCount }}</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <i class="bi bi-info-circle"></i>
+      Les résultats sont des estimations destinées à l'aide à la décision.
+    </div>
+  </aside>
+
+  <!-- ===== Partie principale ===== -->
+  <div class="main">
+    <header class="header">
+      <div>
+        <h1 class="header-title">{{ pageTitle }}</h1>
+        <div class="header-date">{{ now | date: 'EEEE dd/MM/yyyy · HH:mm' }}</div>
+      </div>
+
+      <div class="header-right">
+        <a routerLink="/alertes" class="alert-counter" [class.has-alerts]="activeAlertCount > 0"
+           title="Alertes non traitées">
+          <i class="bi bi-bell-fill"></i>
+          <span>{{ activeAlertCount }}</span><span class="counter-text">alerte(s) non traitée(s)</span>
+        </a>
+
+        <div class="server-status" [class.online]="serverOnline"
+             [title]="serverOnline ? 'Le serveur de l\'application répond' : 'Le serveur ne répond pas'">
+          <span class="status-dot"></span>
+          @if (serverOnline) {
+            Connecté
+          } @else {
+            Hors ligne
+          }
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

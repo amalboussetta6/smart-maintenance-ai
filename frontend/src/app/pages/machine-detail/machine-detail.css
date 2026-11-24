@@ -1,0 +1,71 @@
+.machine-header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.machine-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.machine-title h2 {
+  font-size: 19px;
+}
+
+.title-badges {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.title-badges .badge {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.machine-stats {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.kpi-value small {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.recommendation-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  border: 1px solid #cfe2ff;
+}
+
+.recommendation-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #174a9c;
+}
+
+.recommendation-main {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sensor-select {
+  max-width: 360px;
+}
+
+.scroll-table {
+  max-height: 420px;
+  overflow-y: auto;
+}

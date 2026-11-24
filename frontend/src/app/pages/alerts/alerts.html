@@ -1,0 +1,99 @@
+<div class="page">
+  <!-- ===== Indicateurs ===== -->
+  <div class="grid grid-4">
+    <div class="card kpi">
+      <div class="kpi-icon icon-blue"><i class="bi bi-bell"></i></div>
+      <div><div class="kpi-label">Alertes non traitées</div><div class="kpi-value">{{ countActiveAlerts('') }}</div></div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-red"><i class="bi bi-exclamation-octagon"></i></div>
+      <div><div class="kpi-label">Critiques non traitées</div><div class="kpi-value">{{ countActiveAlerts('Critique') }}</div></div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-orange"><i class="bi bi-exclamation-circle"></i></div>
+      <div><div class="kpi-label">Avertissements non traités</div><div class="kpi-value">{{ countActiveAlerts('Avertissement') }}</div></div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-icon icon-green"><i class="bi bi-check2-all"></i></div>
+      <div><div class="kpi-label">Alertes traitées</div><div class="kpi-value">{{ countTreatedAlerts() }}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input class="input" type="text" placeholder="Rechercher une machine, un texte..." [(ngModel)]="searchText" />
+        </div>
+        <select class="select" [(ngModel)]="severityFilter">
+          <option value="">Toutes les gravités</option>
+          <option value="Critique">Critique</option>
+          <option value="Avertissement">Avertissement</option>
+        </select>
+        <select class="select" [(ngModel)]="statusFilter">
+          <option value="">Tous les statuts</option>
+          <option value="active">Non traitées</option>
+          <option value="traitée">Traitées</option>
+        </select>
+        @if (searchText || severityFilter || statusFilter !== 'active') {
+          <button class="btn btn-light btn-small" (click)="resetFilters()"><i class="bi bi-x-lg"></i> Tout afficher</button>
+        }
+      </div>
+      <button class="btn btn-light btn-small" (click)="loadAlerts()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+    </div>
+
+    <p class="text-muted text-small alerts-note">
+      Une alerte est créée lorsqu'une machine passe à l'état d'avertissement ou critique. Elle n'est pas répétée tant
+      que la machine reste dans le même état. Les recommandations sont des propositions, pas des diagnostics.
+    </p>
+
+    @if (loading) {
+      <div class="loading"><div class="spinner"></div> Chargement des alertes...</div>
+    }
+    @if (errorMessage) {
+      <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+    }
+
+    <div class="alert-list">
+      @for (alert of getFilteredAlerts(); track alert.id) {
+        <div class="alert-card" [class.critical]="alert.severity === 'Critique'"
+             [class.warning]="alert.severity === 'Avertissement'" [class.treated]="alert.status === 'traitée'">
+          <div class="alert-main">
+            <div class="alert-top">
+              <span [class]="getStateBadgeClass(alert.severity)">{{ alert.severity }}</span>
+              <a class="text-strong" [routerLink]="['/machines', alert.machine_id]">{{ alert.machine_name }}</a>
+              <span class="text-muted text-small">{{ alert.machine_id }}</span>
+            </div>
+            <div class="alert-description">{{ alert.description }}</div>
+            <div class="recommendation">
+              <i class="bi bi-wrench-adjustable"></i>
+              <span><b>Recommandation :</b> {{ alert.recommendation }}</span>
+            </div>
+          </div>
+
+          <div class="alert-side">
+            <div class="text-muted text-small"><i class="bi bi-calendar3"></i> {{ alert.created_at | date: 'dd/MM/yyyy à HH:mm' }}</div>
+            <div class="kpi-label">
+              Durée de vie restante estimée
+              <i class="bi bi-info-circle help" [attr.data-tip]="helpTexts.rul"></i>
+            </div>
+            <b class="rul-value">{{ alert.estimated_rul | number: '1.0-0' }} cycles</b>
+            @if (alert.status === 'active') {
+              <span class="badge badge-info">Non traitée</span>
+              <button class="btn btn-success btn-small" (click)="markAsTreated(alert)">
+                <i class="bi bi-check2"></i> Marquer comme traitée
+              </button>
+            } @else {
+              <span class="badge badge-gray">Traitée</span>
+            }
+          </div>
+        </div>
+      } @empty {
+        @if (!loading && !errorMessage) {
+          <div class="empty">Aucune alerte ne correspond aux filtres.</div>
+        }
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,80 @@
+.priority-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.priority-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.priority-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-count {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.priority-tab.active {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+}
+
+.tab-urgent i, .tab-urgent .tab-count { color: var(--red); }
+.tab-high i, .tab-high .tab-count { color: var(--orange); }
+.tab-normal i, .tab-normal .tab-count { color: var(--green); }
+
+.priority-group {
+  animation: fadeIn 0.3s ease;
+}
+
+.recommendation-text.strong {
+  font-weight: 600;
+}
+
+.rules table {
+  margin-top: 14px;
+}
+
+.rules td {
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .priority-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* À l'impression, on masque la barre latérale et les boutons */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+.sensors-to-check {
+  max-width: 320px;
+}

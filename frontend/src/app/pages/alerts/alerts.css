@@ -1,0 +1,86 @@
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 10px;
+  background: var(--white);
+  animation: fadeIn 0.3s ease;
+}
+
+.alert-card.critical {
+  border-left-color: var(--red);
+}
+
+.alert-card.warning {
+  border-left-color: var(--orange);
+}
+
+.alert-card.treated {
+  opacity: 0.6;
+}
+
+.alert-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alert-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.alert-top a {
+  color: var(--text);
+}
+
+.recommendation {
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #f6f9fd;
+  font-size: 13px;
+}
+
+.recommendation i {
+  color: var(--blue);
+}
+
+.alert-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 210px;
+}
+
+.alerts-note {
+  margin: 0 0 14px;
+}
+
+@media (max-width: 900px) {
+  .alert-card {
+    flex-direction: column;
+  }
+
+  .alert-side {
+    align-items: flex-start;
+  }
+}
+
+.rul-value {
+  color: var(--text);
+  font-size: 14px;
+}

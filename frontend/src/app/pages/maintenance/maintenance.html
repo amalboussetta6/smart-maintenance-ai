@@ -1,0 +1,126 @@
+<div class="page">
+  <div class="page-actions">
+    <div class="disclaimer">
+      <i class="bi bi-info-circle"></i>
+      Plan d'aide à la décision : les priorités et recommandations sont calculées à partir des estimations
+      et de règles simples. Elles ne remplacent pas le diagnostic d'un technicien.
+    </div>
+    <div class="toolbar no-print">
+      @if (lastRefresh) {
+        <span class="text-muted text-small">Actualisé à {{ lastRefresh | date: 'HH:mm:ss' }}</span>
+      }
+      <button class="btn btn-light btn-small" (click)="loadMachines()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+      <button class="btn btn-primary btn-small" (click)="printPlan()"><i class="bi bi-printer"></i> Imprimer le plan</button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><div class="spinner"></div> Chargement du plan de maintenance...</div>
+  }
+  @if (errorMessage) {
+    <div class="error-box"><i class="bi bi-exclamation-triangle-fill"></i> {{ errorMessage }}</div>
+  }
+
+  @if (!loading && !errorMessage) {
+    <!-- ===== Onglets / compteurs par priorité ===== -->
+    <div class="priority-tabs no-print">
+      <button class="priority-tab" [class.active]="selectedPriority === ''" (click)="selectPriority('')">
+        <span class="tab-label">Toutes</span>
+        <span class="tab-count">{{ machines.length }}</span>
+      </button>
+      <button class="priority-tab tab-urgent" [class.active]="selectedPriority === 'Urgente'" (click)="selectPriority('Urgente')">
+        <span class="tab-label"><i class="bi bi-exclamation-octagon"></i> Urgente</span>
+        <span class="tab-count">{{ getMachinesByPriority('Urgente').length }}</span>
+      </button>
+      <button class="priority-tab tab-high" [class.active]="selectedPriority === 'Élevée'" (click)="selectPriority('Élevée')">
+        <span class="tab-label"><i class="bi bi-exclamation-circle"></i> Élevée</span>
+        <span class="tab-count">{{ getMachinesByPriority('Élevée').length }}</span>
+      </button>
+      <button class="priority-tab tab-normal" [class.active]="selectedPriority === 'Normale'" (click)="selectPriority('Normale')">
+        <span class="tab-label"><i class="bi bi-check-circle"></i> Normale</span>
+        <span class="tab-count">{{ getMachinesByPriority('Normale').length }}</span>
+      </button>
+    </div>
+
+    <!-- ===== Un tableau par niveau de priorité ===== -->
+    @for (priority of getVisiblePriorities(); track priority) {
+      @if (getMachinesByPriority(priority).length > 0 || selectedPriority === priority) {
+        <div class="card priority-group">
+          <div class="card-header">
+            <div class="card-title">
+              <span [class]="getPriorityBadgeClass(priority)">{{ priority }}</span>
+              {{ getGroupTitle(priority) }}
+            </div>
+            <span class="text-muted">{{ getMachinesByPriority(priority).length }} machine(s)</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Machine</th>
+                  <th>État</th>
+                  <th>Durée de vie restante<i class="bi bi-info-circle help help-down" [attr.data-tip]="helpTexts.rul"></i></th>
+                  <th>Score de santé</th>
+                  <th>Anomalies observées</th>
+                  <th>Recommandation d'intervention</th>
+                  <th class="no-print"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (machine of getMachinesByPriority(priority); track machine.machine_id) {
+                  <tr>
+                    <td>
+                      <div class="text-strong nowrap">{{ machine.name }}</div>
+                      <div class="text-muted text-small nowrap">{{ machine.machine_id }} · actualisé le {{ machine.last_update | date: 'dd/MM HH:mm' }}</div>
+                    </td>
+                    <td><span [class]="getStateBadgeClass(machine.state)">{{ machine.state }}</span></td>
+                    @if (machine.health_score !== null) {
+                      <td class="text-strong nowrap">{{ machine.current_rul | number: '1.0-0' }} cycles</td>
+                      <td class="nowrap">{{ machine.health_score | number: '1.0-0' }}/100</td>
+                      <td>
+                        @if (machine.is_anomaly) {
+                          <span class="unusual"><i class="bi bi-exclamation-triangle-fill"></i> Comportement inhabituel</span>
+                          <div class="text-muted text-small sensors-to-check">À contrôler (indicatif) : {{ machine.unusual_sensors.join(', ') }}</div>
+                        } @else {
+                          <span class="usual">Aucune anomalie</span>
+                          <div class="text-muted text-small">Indicateur {{ getAnomalyLevelLabel(machine.anomaly_score) | lowercase }}</div>
+                        }
+                      </td>
+                    } @else {
+                      <td colspan="3" class="text-muted text-small">Aucune estimation disponible.</td>
+                    }
+                    <td>
+                      <div class="recommendation-text strong"><i class="bi bi-wrench-adjustable"></i>{{ machine.recommendation }}</div>
+                    </td>
+                    <td class="text-right no-print">
+                      <a [routerLink]="['/machines', machine.machine_id]" class="btn btn-light btn-small">Détails</a>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="7" class="empty">Aucune machine dans cette catégorie.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ===== Règles utilisées ===== -->
+    <div class="card rules no-print">
+      <div class="card-title"><i class="bi bi-signpost-split"></i> Comment les recommandations sont-elles choisies ?</div>
+      <table>
+        <thead><tr><th>Situation de la machine</th><th>Priorité</th><th>Recommandation</th></tr></thead>
+        <tbody>
+          <tr><td>État critique et durée de vie restante estimée ≤ 20 cycles</td><td><span class="badge badge-critical">Urgente</span></td><td>Faire vérifier rapidement la machine par un technicien.</td></tr>
+          <tr><td>État critique</td><td><span class="badge badge-critical">Urgente</span></td><td>Prévoir une intervention de maintenance prioritaire.</td></tr>
+          <tr><td>Avertissement avec comportement inhabituel ou durée de vie restante ≤ 60 cycles</td><td><span class="badge badge-warning">Élevée</span></td><td>Planifier une inspection préventive.</td></tr>
+          <tr><td>Avertissement</td><td><span class="badge badge-warning">Élevée</span></td><td>Renforcer la surveillance des capteurs.</td></tr>
+          <tr><td>État normal avec comportement inhabituel</td><td><span class="badge badge-normal">Normale</span></td><td>Renforcer la surveillance des capteurs.</td></tr>
+          <tr><td>État normal</td><td><span class="badge badge-normal">Normale</span></td><td>Continuer la surveillance habituelle.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

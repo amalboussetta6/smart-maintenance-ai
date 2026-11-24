@@ -1,0 +1,21 @@
+# Dépendances Python de Smart Maintenance AI
+# (versions identiques à celles utilisées pour entraîner les modèles :
+#  les fichiers .pkl de scikit-learn doivent être relus avec la même version)
+
+# Intelligence artificielle
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.1
+joblib==1.6.0
+matplotlib==3.11.2
+seaborn==0.13.2
+
+# Jupyter Notebook
+notebook
+ipykernel
+
+# Backend
+fastapi==0.165.0
+uvicorn==0.54.0
+pydantic==2.13.5
+pymongo==4.20.1
